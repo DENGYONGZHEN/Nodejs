@@ -39,19 +39,64 @@ const url = require('url');
 
 //////////////////////////////////////////////////////////server
 
+const replaceTemplate = (template, product) => {
+  let output = template.replace(/{%PRODUCTNAME%}/g, product.productName);
+  output = output.replace(/{%IMAGE%}/g, product.image);
+  output = output.replace(/{%FROM%}/g, product.from);
+  output = output.replace(/{%NUTRIENTS%}/g, product.nutrients);
+  output = output.replace(/{%QUANTITY%}/g, product.quantity);
+  output = output.replace(/{%PRICE%}/g, product.price);
+  output = output.replace(/{%DESCRIPTION%}/g, product.description);
+  output = output.replace(/{%ID%}/g, product.id);
+  if (!product.organic) {
+    output = output.replace(/{%NOT_ORGANIC%}/g, 'not-organic');
+  }
+  return output;
+};
+
+const templateOverview = fs.readFileSync(
+  './templates/template-overview.html',
+  'utf-8'
+);
+const templateCard = fs.readFileSync('./templates/template-card.html', 'utf-8');
+const templateProduct = fs.readFileSync(
+  './templates/template-product.html',
+  'utf-8'
+);
 const data = fs.readFileSync('./dev-data/data.json', 'utf-8');
+const dateobj = JSON.parse(data);
 
 const server = http.createServer((request, response) => {
   const pathName = request.url;
+
+  //overview age
   if (pathName === '/' || pathName === '/overview') {
-    response.end('This is the Overview');
+    response.writeHead(200, {
+      'Content-type': 'text/html',
+    });
+
+    const cardHtml = dateobj
+      .map((el) => replaceTemplate(templateCard, el))
+      .join('');
+
+    const output = templateOverview.replace('{%PRODUCT_CARD%}', cardHtml);
+    response.end(output);
+
+    //product page
   } else if (pathName === '/product') {
-    response.end('This is the Product');
+    response.writeHead(200, {
+      'Content-type': 'text/html',
+    });
+    response.end(templateProduct);
+
+    //api
   } else if (pathName === '/api') {
     response.writeHead(200, {
       'Content-type': 'application/json',
     });
     response.end(data);
+
+    //not found page
   } else {
     response.writeHead(404, {
       'Content-type': 'text/html',

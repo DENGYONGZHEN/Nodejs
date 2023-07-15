@@ -1,5 +1,8 @@
 const fs = require('fs');
+const http = require('http');
+const url = require('url');
 
+///////////////////////////////////////////////////////////////fs
 // //同步读取文件，指定编码         blocking  synchronous
 // const textIn = fs.readFileSync('./txt/input.txt', 'utf-8');
 
@@ -32,17 +35,33 @@ const fs = require('fs');
 //     });
 //   });
 // });
+///////////////////////////////////////////////////////////////fs
 
-fs.readFile('./txt/start.txt', 'utf-8')
-  .then((err, data) => {
-    console.log(data);
-    return fs.readFile(`./txt/${data}.txt`, 'utf-8');
-  })
-  .then((err, data) => {
-    console.log(data);
-    return fs.readFile('./txt/append.txt', 'utf-8');
-  })
-  .then((err, data) => {
-    console.log(data);
-    fs.writeFile('./txt/final.txt', `${data}`, 'utf-8');
-  });
+//////////////////////////////////////////////////////////server
+
+const data = fs.readFileSync('./dev-data/data.json', 'utf-8');
+
+const server = http.createServer((request, response) => {
+  const pathName = request.url;
+  if (pathName === '/' || pathName === '/overview') {
+    response.end('This is the Overview');
+  } else if (pathName === '/product') {
+    response.end('This is the Product');
+  } else if (pathName === '/api') {
+    response.writeHead(200, {
+      'Content-type': 'application/json',
+    });
+    response.end(data);
+  } else {
+    response.writeHead(404, {
+      'Content-type': 'text/html',
+    });
+    response.end('<h1>Page not found</h1>');
+  }
+});
+
+server.listen(3000, () => {
+  console.log('server is running');
+});
+
+//////////////////////////////////////////////////////////server

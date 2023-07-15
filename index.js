@@ -55,22 +55,25 @@ const replaceTemplate = (template, product) => {
 };
 
 const templateOverview = fs.readFileSync(
-  './templates/template-overview.html',
+  `${__dirname}/templates/template-overview.html`,
   'utf-8'
 );
-const templateCard = fs.readFileSync('./templates/template-card.html', 'utf-8');
+const templateCard = fs.readFileSync(
+  `${__dirname}/templates/template-card.html`,
+  'utf-8'
+);
 const templateProduct = fs.readFileSync(
-  './templates/template-product.html',
+  `${__dirname}/templates/template-product.html`,
   'utf-8'
 );
-const data = fs.readFileSync('./dev-data/data.json', 'utf-8');
+const data = fs.readFileSync(`${__dirname}/dev-data/data.json`, 'utf-8');
 const dateobj = JSON.parse(data);
 
 const server = http.createServer((request, response) => {
-  const pathName = request.url;
+  const { pathname, query } = url.parse(request.url, true);
 
   //overview age
-  if (pathName === '/' || pathName === '/overview') {
+  if (pathname === '/' || pathname === '/overview') {
     response.writeHead(200, {
       'Content-type': 'text/html',
     });
@@ -83,14 +86,16 @@ const server = http.createServer((request, response) => {
     response.end(output);
 
     //product page
-  } else if (pathName === '/product') {
+  } else if (pathname === '/product') {
     response.writeHead(200, {
       'Content-type': 'text/html',
     });
-    response.end(templateProduct);
+    const product = dateobj[query.id];
+    const productOutput = replaceTemplate(templateProduct, product);
+    response.end(productOutput);
 
     //api
-  } else if (pathName === '/api') {
+  } else if (pathname === '/api') {
     response.writeHead(200, {
       'Content-type': 'application/json',
     });

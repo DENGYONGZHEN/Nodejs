@@ -20,6 +20,7 @@ app.use(express.static(`${__dirname}/public`));
 //自定义 middleware
 app.use((req, res, next) => {
   req.requestTime = new Date().toISOString();
+  // console.log(req.headers);
   next();
 });
 

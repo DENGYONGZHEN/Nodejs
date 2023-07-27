@@ -1,7 +1,7 @@
 const Tour = require('../models/tourModel');
-const APIFeatures = require('../utils/apiFeatures');
-const AppError = require('../utils/appError');
+
 const catchAsync = require('../utils/catchAsync');
+const factory = require('./handlerFactory');
 
 // 2) router handlers
 
@@ -12,7 +12,9 @@ exports.aliasTopTours = (req, res, next) => {
   next();
 };
 
-exports.getAllTours = catchAsync(async (req, res, next) => {
+exports.getAllTours = factory.getAll(Tour);
+
+/* exports.getAllTours = catchAsync(async (req, res, next) => {
   const feature = new APIFeatures(Tour.find(), req.query)
     .filter()
     .sort()
@@ -28,9 +30,11 @@ exports.getAllTours = catchAsync(async (req, res, next) => {
       tours: tours,
     },
   });
-});
+}); */
 
-exports.getTourById = catchAsync(async (req, res, next) => {
+exports.getTourById = factory.getOneById(Tour, { path: 'reviews' });
+
+/* exports.getTourById = catchAsync(async (req, res, next) => {
   const tour = await Tour.findById(req.params.id).populate('reviews');
 
   if (!tour) {
@@ -42,9 +46,11 @@ exports.getTourById = catchAsync(async (req, res, next) => {
       tour: tour,
     },
   });
-});
+}); */
 
-exports.patchTour = catchAsync(async (req, res, next) => {
+exports.patchTour = factory.patchOne(Tour);
+
+/* exports.patchTour = catchAsync(async (req, res, next) => {
   const tour = await Tour.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
     runValidators: true,
@@ -58,9 +64,10 @@ exports.patchTour = catchAsync(async (req, res, next) => {
       tour: tour,
     },
   });
-});
+}); */
 
-exports.deleteTour = catchAsync(async (req, res, next) => {
+exports.deleteTour = factory.deleteOne(Tour);
+/* exports.deleteTour = catchAsync(async (req, res, next) => {
   const tour = await Tour.findByIdAndDelete(req.params.id);
   if (!tour) {
     return next(new AppError('No tour found with that ID', 404));
@@ -69,7 +76,7 @@ exports.deleteTour = catchAsync(async (req, res, next) => {
     status: 'success',
     data: null,
   });
-});
+}); */
 
 //实际调用函数，把saync函数当作参数 fn 传入
 /**
@@ -79,9 +86,10 @@ exports.deleteTour = catchAsync(async (req, res, next) => {
     当post请求发起时，就会执行fn函数，而fn函数就是async函数，会返回一个promise
     如果rejected，会执行catch(),catch会执行next()
  */
-exports.postTour = catchAsync(async (req, res, next) => {
-  /*   const newTour = new Tour({});
-    newTour.save(); */
+exports.postTour = factory.postOne(Tour);
+
+/* exports.postTour = catchAsync(async (req, res, next) => {
+ 
   const newTour = await Tour.create(req.body);
   res.status(201).json({
     status: 'success',
@@ -89,15 +97,8 @@ exports.postTour = catchAsync(async (req, res, next) => {
       tour: newTour,
     },
   });
-  /*   try {
-  
-  } catch (err) {
-    res.status(400).json({
-      status: 'fail',
-      message: err,
-    });
-  } */
-});
+
+}); */
 
 exports.getTourStats = catchAsync(async (req, res, next) => {
   const stats = await Tour.aggregate([

@@ -34,9 +34,9 @@ const login = async (email, password) => {
   }
 };
 
-const loginForm = document.querySelector('.form');
+const loginForm = document.querySelector('.form--login');
 if (loginForm) {
-  document.querySelector('.form').addEventListener('submit', (e) => {
+  document.querySelector('.form--login').addEventListener('submit', (e) => {
     e.preventDefault();
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
@@ -54,7 +54,7 @@ const logout = async () => {
       location.reload(true);
     }
   } catch (err) {
-    alert('error', 'error log out ,try again !');
+    showAlert('error', 'error log out ,try again !');
   }
 };
 
@@ -62,3 +62,47 @@ const logoutBtn = document.getElementById('btn');
 if (logoutBtn) {
   document.querySelector('.nav__el--logout').addEventListener('click', logout);
 }
+
+//type is either 'password' or 'data'
+const updateSettings = async (data, type) => {
+  try {
+    console.log(showAlert);
+    const url =
+      type === 'password'
+        ? '/api/v1/users/updateMyPassword'
+        : '/api/v1/users/updateMe';
+    const res = await axios({
+      method: 'PATCH',
+      url,
+      data,
+    });
+    if (res.data.status === 'success') {
+      showAlert('success', `${type.toUpperCase()} update successfully!`);
+    }
+  } catch (err) {
+    showAlert('error', err.response.data.message);
+  }
+};
+
+document.querySelector('.form-user-data').addEventListener('submit', (e) => {
+  e.preventDefault;
+  const name = document.getElementById('name').value;
+  const email = document.getElementById('email').value;
+  updateSettings({ name, email }, 'data');
+});
+
+document
+  .querySelector('.form-user-password')
+  .addEventListener('submit', async (e) => {
+    e.preventDefault;
+    const passwordCurrent = document.getElementById('password-current').value;
+    const password = document.getElementById('password').value;
+    const passwordConfirm = document.getElementById('password-confirm').value;
+    await updateSettings(
+      { passwordCurrent, password, passwordConfirm },
+      'password',
+    );
+    document.getElementById('password-current').value = '';
+    document.getElementById('password').value = '';
+    document.getElementById('password-confirm').value = '';
+  });

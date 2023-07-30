@@ -22,32 +22,57 @@ const handleJsonWebTokenError = () =>
 const handleTokenExpiredError = () =>
   new AppError('Token has expired! Please log in again', 401);
 
-const sendErrDev = (err, res) => {
-  res.status(err.statusCode).json({
-    status: err.status,
-    error: err,
-    message: err.message,
-    stack: err.stack,
+const sendErrDev = (req, err, res) => {
+  //A) API
+  if (req.originalUrl.startsWith('/api')) {
+    return res.status(err.statusCode).json({
+      status: err.status,
+      error: err,
+      message: err.message,
+      stack: err.stack,
+    });
+  }
+  //B) rendered website
+  res.status(err.statusCode).render('error', {
+    title: 'Something went wrong!',
+    msg: err.message,
   });
 };
 
-const sendErrProd = (err, res) => {
-  //Operational trusted error: send message to client
-  if (err.isOperational) {
-    res.status(err.statusCode).json({
-      status: err.status,
-      message: err.message,
-    });
-    //Programming or other unknown error: don't leak error detail to clients
-  } else {
-    // 1) log error
+const sendErrProd = (req, err, res) => {
+  // A) API
+  if (req.originalUrl.startsWith('/api')) {
+    // A)Operational trusted error: send message to client
+    if (err.isOperational) {
+      return res.status(err.statusCode).json({
+        status: err.status,
+        message: err.message,
+      });
+      //Programming or other unknown error: don't leak error detail to clients
+    }
+
     console.error('ERROR 💥', err);
-    // 2) send generic message
-    res.status(500).json({
+    // B) send generic message
+    return res.status(500).json({
       status: 'error',
       message: 'Something went very wrong!',
     });
   }
+  //B) rendered website
+  if (err.isOperational) {
+    // A)Operational trusted error: send message to client
+    return res.status(err.statusCode).render('error', {
+      title: 'Something went wrong!',
+      msg: err.message,
+    });
+  }
+
+  console.error('ERROR 💥', err);
+  // B) send generic message
+  return res.status(err.statusCode).render('error', {
+    title: 'Something went wrong!',
+    msg: 'please try again later!',
+  });
 };
 
 module.exports = (err, req, res, next) => {
@@ -55,7 +80,7 @@ module.exports = (err, req, res, next) => {
   err.statusCode = err.statusCode || 500;
   err.status = err.status || 'error';
   if (process.env.NODE_ENV === 'development') {
-    sendErrDev(err, res);
+    sendErrDev(req, err, res);
   } else if (process.env.NODE_ENV === 'production') {
     console.log(err);
     //注意这里不知道为什么拷贝的error和err不一样，所以下面判断用的err.name
@@ -78,6 +103,6 @@ module.exports = (err, req, res, next) => {
     if (error.name === 'TokenExpiredError') {
       error = handleTokenExpiredError();
     }
-    sendErrProd(error, res);
+    sendErrProd(req, error, res);
   }
 };

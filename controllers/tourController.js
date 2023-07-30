@@ -14,91 +14,13 @@ exports.aliasTopTours = (req, res, next) => {
 
 exports.getAllTours = factory.getAll(Tour);
 
-/* exports.getAllTours = catchAsync(async (req, res, next) => {
-  const feature = new APIFeatures(Tour.find(), req.query)
-    .filter()
-    .sort()
-    .limitField()
-    .pagination();
-
-  const tours = await feature.query;
-
-  res.status(200).json({
-    status: 'success',
-    results: tours.length,
-    data: {
-      tours: tours,
-    },
-  });
-}); */
-
 exports.getTourById = factory.getOneById(Tour, { path: 'reviews' });
-
-/* exports.getTourById = catchAsync(async (req, res, next) => {
-  const tour = await Tour.findById(req.params.id).populate('reviews');
-
-  if (!tour) {
-    return next(new AppError('No tour found with that ID', 404));
-  }
-  res.status(200).json({
-    status: 'success',
-    data: {
-      tour: tour,
-    },
-  });
-}); */
 
 exports.patchTour = factory.patchOne(Tour);
 
-/* exports.patchTour = catchAsync(async (req, res, next) => {
-  const tour = await Tour.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-    runValidators: true,
-  });
-  if (!tour) {
-    return next(new AppError('No tour found with that ID', 404));
-  }
-  res.status(200).json({
-    status: 'success',
-    data: {
-      tour: tour,
-    },
-  });
-}); */
-
 exports.deleteTour = factory.deleteOne(Tour);
-/* exports.deleteTour = catchAsync(async (req, res, next) => {
-  const tour = await Tour.findByIdAndDelete(req.params.id);
-  if (!tour) {
-    return next(new AppError('No tour found with that ID', 404));
-  }
-  res.status(204).json({
-    status: 'success',
-    data: null,
-  });
-}); */
 
-//实际调用函数，把saync函数当作参数 fn 传入
-/**
- * exports.postTour = (req, res, next) => {
-     fn(req, res, next).catch((err) => next(err));
-    };
-    当post请求发起时，就会执行fn函数，而fn函数就是async函数，会返回一个promise
-    如果rejected，会执行catch(),catch会执行next()
- */
 exports.postTour = factory.postOne(Tour);
-
-/* exports.postTour = catchAsync(async (req, res, next) => {
- 
-  const newTour = await Tour.create(req.body);
-  res.status(201).json({
-    status: 'success',
-    data: {
-      tour: newTour,
-    },
-  });
-
-}); */
 
 exports.getTourStats = catchAsync(async (req, res, next) => {
   const stats = await Tour.aggregate([
@@ -120,9 +42,6 @@ exports.getTourStats = catchAsync(async (req, res, next) => {
     {
       $sort: { avgPrice: 1 },
     },
-    // {
-    //   $match: { _id: { $ne: 'EASY' } },
-    // },
   ]);
   res.status(200).json({
     status: 'success',

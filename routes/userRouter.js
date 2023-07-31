@@ -1,4 +1,5 @@
 const express = require('express');
+
 const userController = require('../controllers/userController');
 const authController = require('../controllers/authController');
 
@@ -15,20 +16,16 @@ router.patch('/resetPassword/:token', authController.resetPassword);
 //use middleware  执行后面的代码前都会先执行这个middleware
 router.use(authController.protect);
 
+router.patch('/updateMyPassword', authController.updatePassword);
+
+router.get('/me', userController.getMe, userController.getUserById);
+
 router.patch(
-  '/updateMyPassword',
-
-  authController.updatePassword,
+  '/updateMe',
+  userController.uploadUserPhoto,
+  userController.resizeUserPhoto,
+  userController.updateMe,
 );
-
-router.get(
-  '/me',
-
-  userController.getMe,
-  userController.getUserById,
-);
-
-router.patch('/updateMe', userController.updateMe);
 router.delete('/deleteMe', userController.deleteMe);
 
 //middleware will protect all route after this

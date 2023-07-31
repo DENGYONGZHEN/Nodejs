@@ -85,16 +85,19 @@ const updateSettings = async (data, type) => {
 };
 
 document.querySelector('.form-user-data').addEventListener('submit', (e) => {
-  e.preventDefault;
-  const name = document.getElementById('name').value;
-  const email = document.getElementById('email').value;
-  updateSettings({ name, email }, 'data');
+  e.preventDefault();
+  const form = new FormData();
+  form.append('name', document.getElementById('name').value);
+  form.append('email', document.getElementById('email').value);
+  form.append('photo', document.getElementById('photo').files[0]);
+  console.log(form);
+  updateSettings(form, 'data');
 });
 
 document
   .querySelector('.form-user-password')
   .addEventListener('submit', async (e) => {
-    e.preventDefault;
+    e.preventDefault();
     const passwordCurrent = document.getElementById('password-current').value;
     const password = document.getElementById('password').value;
     const passwordConfirm = document.getElementById('password-confirm').value;

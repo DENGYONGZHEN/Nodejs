@@ -84,19 +84,22 @@ const updateSettings = async (data, type) => {
   }
 };
 
-document.querySelector('.form-user-data').addEventListener('submit', (e) => {
-  e.preventDefault();
-  const form = new FormData();
-  form.append('name', document.getElementById('name').value);
-  form.append('email', document.getElementById('email').value);
-  form.append('photo', document.getElementById('photo').files[0]);
-  console.log(form);
-  updateSettings(form, 'data');
-});
+const userData = document.querySelector('.form-user-data');
+if (userData) {
+  userData.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const form = new FormData();
+    form.append('name', document.getElementById('name').value);
+    form.append('email', document.getElementById('email').value);
+    form.append('photo', document.getElementById('photo').files[0]);
+    console.log(form);
+    updateSettings(form, 'data');
+  });
+}
 
-document
-  .querySelector('.form-user-password')
-  .addEventListener('submit', async (e) => {
+const formUserPassword = document.querySelector('.form-user-password');
+if (formUserPassword) {
+  formUserPassword.addEventListener('submit', async (e) => {
     e.preventDefault();
     const passwordCurrent = document.getElementById('password-current').value;
     const password = document.getElementById('password').value;
@@ -109,3 +112,35 @@ document
     document.getElementById('password').value = '';
     document.getElementById('password-confirm').value = '';
   });
+}
+
+const stripe = Stripe(
+  'pk_test_51NaG8tKjUVHNr8QMcwoSR29acd1QTyjfKpilrnAPIhStkGeZnaNdY905QPWvahKY5f05G4MjVipHoCHJST5iBthg00C1ES3XBN',
+);
+const bookTour = async (tourId) => {
+  try {
+    //1) get checkout session from api
+    const session = await axios({
+      method: 'GET',
+      url: `/api/v1/booking/checkout-session/${tourId}`,
+      data: {},
+    });
+    console.log(session);
+    //2) Create checkout form + charge credit  card
+    await stripe.redirectToCheckout({
+      sessionId: session.data.session.id,
+    });
+  } catch (err) {
+    console.log(err);
+    showAlert('err', err);
+  }
+};
+
+const bookTourBtn = document.getElementById('book-tour');
+if (bookTourBtn) {
+  bookTourBtn.addEventListener('click', (e) => {
+    e.target.textContent = 'Processing...';
+    const { tourId } = e.target.dataset;
+    bookTour(tourId);
+  });
+}

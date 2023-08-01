@@ -14,7 +14,13 @@ module.exports = class Email {
   newTransport() {
     if (process.env.NODE_ENV === 'production') {
       // Sendgrid
-      return 1;
+      return nodemailer.createTransport({
+        service: 'SendGrid',
+        auth: {
+          user: process.env.SEND_GRIP_NAME,
+          pass: process.env.SEND_GRIP_PASSWORD,
+        },
+      });
     }
     //1) create a transporter
     return nodemailer.createTransport({
@@ -52,7 +58,7 @@ module.exports = class Email {
   }
 
   async sendWelcome() {
-    await this.send('welcom', 'Welcome to the Natours family');
+    await this.send('welcome', 'Welcome to the Natours family');
   }
 
   async sendPasswordReset() {

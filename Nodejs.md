@@ -640,10 +640,349 @@ Whenever possible,Libuv will use native async mechanisms in the OS so as to avoi
 
 3.加密和解密操作
 
-
-
 ## event loop
 
+![image-20240702215832046](.\img\image-20240702215832046.png)
+
+timer,I/O,check and close are part of Libuv,but nextTick and promise are not part of Libuv.
+
+1. All user written synchronous Javascript code takes priority over asnyc code that the runtime would like  to eventually execute.
+
+```javascript
+console.log("console.log 1");
+process.nextTick(() => console.log("this is process.nextTick 1"));
+console.log("console.log 2");
+```
+
+2.all callbacks in nextTick queue are executed before all callbacks in promise queue.
+
+```javascript
+process.nextTick(() => console.log("this is process.nextTick 1"));
+process.nextTick(() => {
+  console.log("this is process.nextTick 2");
+  process.nextTick(() => console.log("this is the inner next tick inside next tick"));
+});
+process.nextTick(() => console.log("this is process.nextTick 3"));
+
+Promise.resolve().then(() => console.log("this is Promise.resolve 1"));
+Promise.resolve().then(() => {
+  console.log("this is Promise.resolve 2");
+  process.nextTick(() => console.log("this is the inner next tick inside Promise then block"));
+});
+Promise.resolve().then(() => console.log("this is Promise.resolve 3"));
+----------------------------
+output:
+this is process.nextTick 1
+this is process.nextTick 2
+this is process.nextTick 3
+this is the inner next tick inside next tick
+this is Promise.resolve 1
+this is Promise.resolve 2
+this is Promise.resolve 3
+this is the inner next tick inside Promise then block
+```
+
+3.microtask queues are executed before timer queue
+
+```javascript
+setTimeout(() => console.log("this is setTimeout 1"), 0);
+setTimeout(() => console.log("this is setTimeout 2"), 0);
+setTimeout(() => console.log("this is setTimeout 3"), 0);
+
+process.nextTick(() => console.log("this is process.nextTick 1"));
+process.nextTick(() => {
+  console.log("this is process.nextTick 2");
+  process.nextTick(() => consol.log("this is the inner next tick inside next tick"));
+});
+process.nextTick(() => console.log("this is process.nextTick 3"));
+
+Promise.resolve().then(() => console.log("this is Promise.resolve 1"));
+Promise.resolve().then(() => {
+  console.log("this is Promise.resolve 2");
+  process.nextTick(() => console.log("this is the inner next tick inside Promise then block")
+  );
+});
+Promise.resolve().then(() => console.log("this is Promise.resolve 3"));
+
+---------------------------------
+output:
+this is process.nextTick 1
+this is process.nextTick 2
+this is process.nextTick 3
+this is the inner next tick inside next tick
+this is Promise.resolve 1
+this is Promise.resolve 2
+this is Promise.resolve 3
+this is the inner next tick inside Promise then block
+this is setTimeout 1
+this is setTimeout 2
+this is setTimeout 3
+```
+
+4.microtask queues are executed in between timer queue callbacks.
+
+```javascript
+setTimeout(() => console.log("this is setTimeout 1"), 0);
+setTimeout(() => {
+  console.log("this is setTimeout 2");
+  process.nextTick(
+    console.log.bind(console, "this is the inner next tick inside setTimeout")
+  );
+}, 0);
+setTimeout(() => console.log("this is setTimeout 3"), 0);
+
+process.nextTick(() => console.log("this is process.nextTick 1"));
+process.nextTick(() => {
+  console.log("this is process.nextTick 2");
+  process.nextTick(
+    console.log.bind(console, "this is the inner next tick inside next tick")
+  );
+});
+process.nextTick(() => console.log("this is process.nextTick 3"));
+
+Promise.resolve().then(() => console.log("this is Promise.resolve 1"));
+Promise.resolve().then(() => {
+  console.log("this is Promise.resolve 2");
+  process.nextTick(
+    console.log.bind(
+      console,
+      "this is the inner next tick inside Promise then block"
+    )
+  );
+});
+Promise.resolve().then(() => console.log("this is Promise.resolve 3"));
+--------------------
+output:
+this is process.nextTick 1
+this is process.nextTick 2
+this is process.nextTick 3
+this is the inner next tick inside next tick
+this is Promise.resolve 1
+this is Promise.resolve 2
+this is Promise.resolve 3
+this is the inner next tick inside Promise then block
+this is setTimeout 1
+this is setTimeout 2
+this is the inner next tick inside setTimeout
+this is setTimeout 3
+```
+
+5.timer queue callbacks are executed in FIFO order
+
+```javascript
+setTimeout(() => console.log("this is setTimeout 1"), 1000);
+setTimeout(() => console.log("this is setTimeout 2"), 500);
+setTimeout(() => console.log("this is setTimeout 3"), 0);
+---------------
+output:
+this is setTimeout 3
+this is setTimeout 2
+this is setTimeout 1
+```
+
+6.Microtask queues callbacks are executed before I/O queue callbacks
+
+```javascript
+const fs = require("fs");
+
+fs.readFile(__filename, () => {
+  console.log("this is readFile 1");
+});
+
+process.nextTick(() => console.log("this is process.nextTick 1"));
+Promise.resolve().then(() => console.log("this is Promise.resolve 1"));
+----------------
+output:
+this is process.nextTick 1
+this is Promise.resolve 1
+this is readFile 1
+```
+
+7.when running setTimeout with delay 0ms and  an I/O async method. the order of execution can never be guaranteed 
+
+```javascript
+const fs = require("fs");
+
+setTimeout(() => console.log("this is setTimeout 1"), 0);
+
+fs.readFile(__filename, () => {
+  console.log("this is readFile 1");
+});
+-----------------
+output:
+this is setTimeout 1
+this is readFile 1
+```
+
+8.I/O queue callbacks are executed after Microtask queues callbacks and Timer queue callbacks are executed
+
+```javascript
+const fs = require("fs");
+
+fs.readFile(__filename, () => {
+  console.log("this is readFile 1");
+});
+
+process.nextTick(() => console.log("this is process.nextTick 1"));
+Promise.resolve().then(() => console.log("this is Promise.resolve 1"));
+setTimeout(() => console.log("this is setTimeout 1"), 0);
+
+for (let i = 0; i < 1000000000; i++) {}
+output:
+this is process.nextTick 1
+this is Promise.resolve 1
+this is setTimeout 1
+this is readFile 1
+```
+
+9.I/O events are polled and callbacks are added only after I/O is complete
+
+```javascript
+const fs = require("fs");
+
+fs.readFile(__filename, () => {
+  console.log("this is readFile 1");
+});
+
+process.nextTick(() => console.log("this is process.nextTick 1"));
+Promise.resolve().then(() => console.log("this is Promise.resolve 1"));
+setTimeout(() => console.log("this is setTimeout 1"), 0);
+setImmediate(() => console.log("this is setImmediate 1"));
+
+for (let i = 0; i < 2000000000; i++) {}
+-------------------
+output:
+this is process.nextTick 1
+this is Promise.resolve 1
+this is setTimeout 1
+this is setImmediate 1
+this is readFile 1
+```
+
+10.Check queue callbacks are executed after Microtask queues callbacks, Timer queue callbacks and I/O queue callbacks are executed
+
+```javascript
+const fs = require("fs");
+
+fs.readFile(__filename, () => {
+  console.log("this is readFile 1");
+  setImmediate(() => console.log("this is inner setImmediate inside readFile"));
+});
+
+process.nextTick(() => console.log("this is process.nextTick 1"));
+Promise.resolve().then(() => console.log("this is Promise.resolve 1"));
+setTimeout(() => console.log("this is setTimeout 1"), 0);
+
+for (let i = 0; i < 2000000000; i++) {}
+-----------------------
+output:
+this is process.nextTick 1
+this is Promise.resolve 1
+this is setTimeout 1
+this is readFile 1
+this is inner setImmediate inside readFile
+```
+
+11.Microtask queues callbacks are executed after I/O callbacks and before check queue callbacks
+
+```javascript
+const fs = require("fs");
+
+fs.readFile(__filename, () => {
+  console.log("this is readFile 1");
+  setImmediate(() => console.log("this is inner setImmediate inside readFile"));
+  process.nextTick(() => console.log("this is inner process.nextTick inside readFile"));
+  Promise.resolve().then(() => console.log("this is inner Promise.resolve inside readFile"));
+});
+
+process.nextTick(() => console.log("this is process.nextTick 1"));
+Promise.resolve().then(() => console.log("this is Promise.resolve 1"));
+setTimeout(() => console.log("this is setTimeout 1"), 0);
+
+for (let i = 0; i < 2000000000; i++) {}
+----------------------
+output:
+this is process.nextTick 1
+this is Promise.resolve 1
+this is setTimeout 1
+this is readFile 1
+this is inner process.nextTick inside readFile
+this is inner Promise.resolve inside readFile
+this is inner setImmediate inside readFile
+
+```
+
+12.Microtask queues callbacks are executed in between check queue callbacks
+
+```javascript
+setImmediate(() => console.log("this is setImmediate 1"));
+setImmediate(() => {
+  console.log("this is setImmediate 2");
+  process.nextTick(() => console.log("this is process.nextTick 1"));
+  Promise.resolve().then(() => console.log("this is Promise.resolve 1"));
+});
+setImmediate(() => console.log("this is setImmediate 3"));
+------------------
+output:
+this is setImmediate 1
+this is setImmediate 2
+this is process.nextTick 1
+this is Promise.resolve 1
+this is setImmediate 3
+```
+
+13.Timer anamoly. Order of execution can never be guaranteed
+
+```javascript
+setTimeout(() => console.log("this is setTimeout 1"), 0);
+setImmediate(() => console.log("this is setImmediate 1"));
+---------------
+output
+PS D:\js-space\Nodejs\src\node-fundamentals> node .\event-loop.js
+this is setImmediate 1
+this is setTimeout 1
+PS D:\js-space\Nodejs\src\node-fundamentals> node .\event-loop.js
+this is setTimeout 1
+this is setImmediate 1
+```
+
+
+
+```javascript
+setTimeout(() => console.log("this is setTimeout 1"), 0);
+setImmediate(() => console.log("this is setImmediate 1"));
+// Uncomment below to guarantee order
+for (let i = 0; i < 1000000000; i++) {}
+
+--------------------
+output:
+this is setTimeout 1
+this is setImmediate 1
+```
+
+14.Close queue callbacks are executed after all other queues callbacks
+
+```javascript
+const fs = require("fs");
+
+const readableStream = fs.createReadStream(__filename);
+readableStream.close();
+
+readableStream.on("close", () => {
+  console.log("this is from readableStream close event callback");
+});
+setImmediate(() => console.log("this is setImmediate 1"));
+setTimeout(() => console.log("this is setTimeout 1"), 0);
+Promise.resolve().then(() => console.log("this is Promise.resolve 1"));
+process.nextTick(() => console.log("this is process.nextTick 1"));
+-----------------
+output:
+this is process.nextTick 1
+this is Promise.resolve 1
+this is setTimeout 1
+this is setImmediate 1
+this is from readableStream close event callback
+```
 
 
 
@@ -678,14 +1017,3 @@ Whenever possible,Libuv will use native async mechanisms in the OS so as to avoi
 
 
 
-
-
-
-
-
-
-
-
-cluster
-
-multil thread
